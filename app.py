@@ -8,6 +8,10 @@ import glob
 import shutil
 import asyncio
 import time
+from dotenv import load_dotenv
+from concurrent.futures import ProcessPoolExecutor
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 logger = logging.getLogger("TorrentBot")
@@ -17,16 +21,16 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+token = os.getenv("DISCORD_TOKEN")
 
+DOWNLOAD_DIR = '/backup/Downloads'
 
-DOWNLOAD_DIR = '/home/velona/Downloads'
+movies_dir = "/home/movies"
 
-movies_dir = "/home/velona/movies"
-
-admin_channel_id = 1234
+admin_channel_id = int(os.getenv("ADMIN_CHANNEL_ID"))
 
 qb = Client("http://127.0.0.1:8080")
-qb.login("admin", "korosensei")
+qb.login("admin", "adminadmin")
 
 def convert_to_mp4(file_path):
     """
@@ -42,6 +46,7 @@ def convert_to_mp4(file_path):
             "-preset", "medium",   # Kecepatan encoding
             "-codec:a", "aac",     # Codec audio
             "-b:a", "192k",        # Bitrate audio
+            "-threads", "1",       # Jumlah thread
             output_path
         ]
         logging.info(f"Running command: {' '.join(command)}")
@@ -68,11 +73,27 @@ def get_active_torrents():
     torrents = qb.torrents()
     active_torrents = []
     for torrent in torrents:
-        if torrent['state'] in ['downloading', 'stalledUP']:
+        if torrent['state'] == 'downloading':
             status = {
                 'name': torrent['name'],
                 'progress': torrent['progress'] * 100,  # Convert to percentage
                 'state': torrent['state']
+            }
+            active_torrents.append(status)
+        elif torrent['state'] == 'stalledUP':
+            status = {
+                'name': torrent['name'],
+                'progress': torrent['progress'] * 100,  # Convert to percentage
+                'state': torrent['state']
+            }
+            active_torrents.append(status)
+        elif torrent['state'] == 'uploading':
+            # Pause the torrent if it has finished downloading
+            qb.pause(torrent['hash'])
+            status = {
+                'name': torrent['name'],
+                'progress': torrent['progress'] * 100,  # Convert to percentage
+                'state': 'paused'
             }
             active_torrents.append(status)
     return active_torrents
@@ -233,10 +254,12 @@ async def convert(ctx, file_name: str):
         )
         await ctx.send(embed=embed)
 
-        converted_path = convert_to_mp4(file_path)
+        loop = asyncio.get_running_loop()
+        with ProcessPoolExecutor() as pool:
+            converted_path = await loop.run_in_executor(pool, convert_to_mp4, file_path)
         
         # Move the converted file to the specified path
-        destination_path = os.path.join("/home/velona/movies", os.path.basename(converted_path))
+        destination_path = os.path.join("/home/movies", os.path.basename(converted_path))
         shutil.move(converted_path, destination_path)
         
         embed = discord.Embed(
@@ -257,7 +280,7 @@ async def convert(ctx, file_name: str):
 async def rename(ctx, old_name: str, new_name: str):
 
     try:
-        old_path = os.path.join("/home/velona/movies", old_name)
+        old_path = os.path.join("/home/movies", old_name)
 
         if not os.path.exists(old_path):
             embed = discord.Embed(
@@ -316,7 +339,7 @@ async def listFiles(ctx):
 @bot.command()
 async def listMovies(ctx):
 
-    movies_dir = "/home/velona/movies"
+    movies_dir = "/home/movies"
     allowed_extensions = {".mkv", ".mp4", ".srt", ".ass", ".vtt"}
     movie_list = []
 
@@ -343,7 +366,7 @@ async def listMovies(ctx):
 @bot.command()
 async def deleteMovie(ctx, *, movie_name: str):
 
-    movies_dir = "/home/velona/movies"
+    movies_dir = "/home/movies"
     movie_path = os.path.join(movies_dir, movie_name)
 
     if os.path.exists(movie_path):
@@ -416,4 +439,4 @@ async def helpme(ctx):
 
     await ctx.send(embed=embed)
 
-bot.run()
+bot.run(token)
