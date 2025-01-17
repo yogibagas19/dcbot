@@ -269,12 +269,6 @@ async def convert(ctx, file_name: str):
         )
         message = await ctx.send(embed=embed)
 
-        def progress_callback(progress):
-            if "time=" in progress:
-                time_str = progress.split("time=")[-1].split(" ")[0]
-                embed.description = f"Sedang mengonversi file `{file_name}`...\nWaktu: {time_str}"
-                asyncio.run_coroutine_threadsafe(message.edit(embed=embed), bot.loop)
-
         loop = asyncio.get_running_loop()
         with ProcessPoolExecutor() as pool:
             converted_path = await loop.run_in_executor(pool, convert_to_mp4, file_path, progress_callback)
