@@ -49,7 +49,6 @@ def convert_to_mp4(file_path, progress_callback):
             "-threads", "1",       # Jumlah thread
             output_path
         ]
-
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         while True:
             output = process.stderr.readline()
@@ -57,8 +56,6 @@ def convert_to_mp4(file_path, progress_callback):
                 break
             if output:
                 progress_callback(output.strip())
-
-        logging.info(f"File converted successfully: {output_path}")
         return output_path
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to convert {file_path}: {e}")
