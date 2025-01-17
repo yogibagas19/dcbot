@@ -49,10 +49,16 @@ def convert_to_mp4(file_path):
             "-threads", "1",       # Jumlah thread
             output_path
         ]
-        logging.info(f"Running command: {' '.join(command)}")
-        subprocess.run(command, check=True)
-        logging.info(f"File converted successfully: {output_path}")
 
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        while True:
+            output = process.stderr.readline()
+            if output == '' and process.poll() is not None:
+                break
+            if output:
+                progress_callback(output.strip())
+
+        logging.info(f"File converted successfully: {output_path}")
         return output_path
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to convert {file_path}: {e}")
@@ -252,14 +258,20 @@ async def convert(ctx, file_name: str):
             description=f"Sedang mengonversi file `{file_name}`...",
             color=discord.Color.blue()
         )
-        await ctx.send(embed=embed)
+        message = await ctx.send(embed=embed)
+
+        def progress_callback(progress):
+            if "time=" in progress:
+                time_str = progress.split("time=")[-1].split(" ")[0]
+                embed.description = f"Sedang mengonversi file `{file_name}`...\nWaktu: {time_str}"
+                asyncio.run_coroutine_threadsafe(message.edit(embed=embed), bot.loop)
 
         loop = asyncio.get_running_loop()
         with ProcessPoolExecutor() as pool:
-            converted_path = await loop.run_in_executor(pool, convert_to_mp4, file_path)
+            converted_path = await loop.run_in_executor(pool, convert_to_mp4, file_path, progress_callback)
         
         # Move the converted file to the specified path
-        destination_path = os.path.join("/home/movies", os.path.basename(converted_path))
+        destination_path = os.path.join("/home/velona/movies", os.path.basename(converted_path))
         shutil.move(converted_path, destination_path)
         
         embed = discord.Embed(
@@ -267,7 +279,7 @@ async def convert(ctx, file_name: str):
             description=f"Berhasil mengonversi dan memindahkan file ke: {destination_path}",
             color=discord.Color.green()
         )
-        await ctx.send(embed=embed)
+        await message.edit(embed=embed)
     except Exception as e:
         embed = discord.Embed(
             title="Kesalahan",
