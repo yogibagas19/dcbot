@@ -32,7 +32,7 @@ admin_channel_id = int(os.getenv("ADMIN_CHANNEL_ID"))
 qb = Client("http://127.0.0.1:8080")
 qb.login("admin", "adminadmin")
 
-def convert_to_mp4(file_path, progress_callback):
+def convert_to_mp4(file_path):
     """
     Mengonversi file MKV ke MP4 menggunakan FFmpeg.
     """
@@ -50,12 +50,9 @@ def convert_to_mp4(file_path, progress_callback):
             output_path
         ]
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        while True:
-            output = process.stderr.readline()
-            if output == '' and process.poll() is not None:
-                break
-            if output:
-                progress_callback(output.strip())
+        process.communicate()  # Tunggu hingga proses selesai
+        if process.returncode != 0:
+            raise subprocess.CalledProcessError(process.returncode, command)
         return output_path
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to convert {file_path}: {e}")
@@ -271,10 +268,10 @@ async def convert(ctx, file_name: str):
 
         loop = asyncio.get_running_loop()
         with ProcessPoolExecutor() as pool:
-            converted_path = await loop.run_in_executor(pool, convert_to_mp4, file_path, progress_callback)
+            converted_path = await loop.run_in_executor(pool, convert_to_mp4, file_path)
         
         # Move the converted file to the specified path
-        destination_path = os.path.join("/home/velona/movies", os.path.basename(converted_path))
+        destination_path = os.path.join("/home/movies", os.path.basename(converted_path))
         shutil.move(converted_path, destination_path)
         
         embed = discord.Embed(
