@@ -49,10 +49,10 @@ def convert_to_mp4(file_path):
             "-threads", "1",       # Jumlah thread
             output_path
         ]
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        process.communicate()  # Tunggu hingga proses selesai
-        if process.returncode != 0:
-            raise subprocess.CalledProcessError(process.returncode, command)
+        logging.info(f"Running command: {' '.join(command)}")
+        subprocess.run(command, check=True)
+        logging.info(f"File converted successfully: {output_path}")
+
         return output_path
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to convert {file_path}: {e}")
@@ -264,7 +264,7 @@ async def convert(ctx, file_name: str):
             description=f"Sedang mengonversi file `{file_name}`...",
             color=discord.Color.blue()
         )
-        message = await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
         loop = asyncio.get_running_loop()
         with ProcessPoolExecutor() as pool:
@@ -279,7 +279,7 @@ async def convert(ctx, file_name: str):
             description=f"Berhasil mengonversi dan memindahkan file ke: {destination_path}",
             color=discord.Color.green()
         )
-        await message.edit(embed=embed)
+        await ctx.send(embed=embed)
     except Exception as e:
         embed = discord.Embed(
             title="Kesalahan",
