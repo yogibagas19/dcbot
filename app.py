@@ -32,7 +32,7 @@ admin_channel_id = int(os.getenv("ADMIN_CHANNEL_ID"))
 qb = Client("http://127.0.0.1:8080")
 qb.login("admin", "adminadmin")
 
-def convert_to_mp4(file_path, progress_callback):
+def convert_to_mp4(file_path, message_id, channel_id, file_name):
     """
     Mengonversi file MKV ke MP4 menggunakan FFmpeg.
     """
@@ -55,7 +55,7 @@ def convert_to_mp4(file_path, progress_callback):
             if output == '' and process.poll() is not None:
                 break
             if output:
-                progress_callback(output.strip())
+                progress_callback(output.strip(), message_id, channel_id, file_name)
         return output_path
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to convert {file_path}: {e}")
@@ -275,7 +275,9 @@ async def convert(ctx, file_name: str):
                 pool, 
                 convert_to_mp4, 
                 file_path, 
-                lambda progress: progress_callback(progress, message.id, ctx.channel.id, file_name)
+                message.id, 
+                ctx.channel.id, 
+                file_name
             )
         
         # Move the converted file to the specified path
