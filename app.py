@@ -32,7 +32,7 @@ admin_channel_id = int(os.getenv("ADMIN_CHANNEL_ID"))
 qb = Client("http://127.0.0.1:8080")
 qb.login("admin", "adminadmin")
 
-def convert_to_mp4(file_path):
+def convert_to_mp4(file_path, progress_callback):
     """
     Mengonversi file MKV ke MP4 menggunakan FFmpeg.
     """
