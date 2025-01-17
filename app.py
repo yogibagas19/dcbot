@@ -61,10 +61,16 @@ def convert_to_mp4(file_path, progress_callback):
         logging.error(f"Failed to convert {file_path}: {e}")
         raise Exception(f"Gagal mengonversi {file_path}: {e}")
 
-def progress_callback(progress, message, embed, file_name):
+def progress_callback(progress, message_id, channel_id, file_name):
     if "time=" in progress:
         time_str = progress.split("time=")[-1].split(" ")[0]
-        embed.description = f"Sedang mengonversi file `{file_name}`...\nWaktu: {time_str}"
+        embed = discord.Embed(
+            title="Proses Konversi",
+            description=f"Sedang mengonversi file `{file_name}`...\nWaktu: {time_str}",
+            color=discord.Color.blue()
+        )
+        channel = bot.get_channel(channel_id)
+        message = asyncio.run_coroutine_threadsafe(channel.fetch_message(message_id), bot.loop).result()
         asyncio.run_coroutine_threadsafe(message.edit(embed=embed), bot.loop)
 
 def rename_file(old_path, new_name):
@@ -263,10 +269,14 @@ async def convert(ctx, file_name: str):
         )
         message = await ctx.send(embed=embed)
 
-
         loop = asyncio.get_running_loop()
         with ProcessPoolExecutor() as pool:
-            converted_path = await loop.run_in_executor(pool, convert_to_mp4, file_path, lambda progress: progress_callback(progress, message, embed, file_name))
+            converted_path = await loop.run_in_executor(
+                pool, 
+                convert_to_mp4, 
+                file_path, 
+                lambda progress: progress_callback(progress, message.id, ctx.channel.id, file_name)
+            )
         
         # Move the converted file to the specified path
         destination_path = os.path.join("/home/movies", os.path.basename(converted_path))
