@@ -342,7 +342,7 @@ async def listFiles(ctx):
         no = 1
         for i in range(0, len(file_list_str), chunk_size):
             chunk = file_list_str[i:i+chunk_size]
-            numbered_chunk = "\n".join([f"{no + idx}. {line}" for idx, line in enumerate(chunk.split('\n'))])
+            numbered_chunk = "\n".join([f"{no + idx}. {line}\n" for idx, line in enumerate(chunk.split('\n'))])
             await ctx.send(f"File yang tersedia:\n```\n{numbered_chunk}\n```")
             no += len(chunk.split('\n'))
     else:
