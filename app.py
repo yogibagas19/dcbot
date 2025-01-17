@@ -268,7 +268,7 @@ async def convert(ctx, file_name: str):
             converted_path = await loop.run_in_executor(pool, convert_to_mp4, file_path, progress_callback)
         
         # Move the converted file to the specified path
-        destination_path = os.path.join("/home/velona/movies", os.path.basename(converted_path))
+        destination_path = os.path.join("/home/movies", os.path.basename(converted_path))
         shutil.move(converted_path, destination_path)
         
         embed = discord.Embed(
